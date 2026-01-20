@@ -37,4 +37,3 @@ jobs:
         with:
           image-name: ${{ github.repository }}/test
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          extra-tags: 'test-tag'
