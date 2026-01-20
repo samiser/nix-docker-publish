@@ -31,6 +31,7 @@ jobs:
             };
           }
           EOF
+          git add flake.nix
       
       - name: Test action
         uses: ./
