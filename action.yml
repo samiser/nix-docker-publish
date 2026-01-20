@@ -1,5 +1,5 @@
 name: 'Nix Docker Image Publisher'
-description: 'Build and publish Docker images from Nix flake dockerImage outputs'
+description: 'Build and publish Docker images from Nix flake outputs'
 branding:
   icon: 'package'
   color: 'blue'
