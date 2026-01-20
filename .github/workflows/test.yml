@@ -1,0 +1,40 @@
+name: Test Action
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Create test flake
+        run: |
+          cat > flake.nix << 'EOF'
+          {
+            description = "Test flake for nix-docker-publish";
+            
+            inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
+            
+            outputs = { self, nixpkgs }: {
+              dockerImage = nixpkgs.legacyPackages.x86_64-linux.dockerTools.buildImage {
+                name = "test-image";
+                tag = "latest";
+                config.Cmd = [ "${nixpkgs.legacyPackages.x86_64-linux.hello}/bin/hello" ];
+              };
+            };
+          }
+          EOF
+      
+      - name: Test action
+        uses: ./
+        with:
+          image-name: ${{ github.repository }}/test
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          extra-tags: 'test-tag'

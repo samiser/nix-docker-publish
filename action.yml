@@ -1,0 +1,94 @@
+name: 'Nix Docker Image Publisher'
+description: 'Build and publish Docker images from Nix flake dockerImage outputs'
+branding:
+  icon: 'package'
+  color: 'blue'
+
+inputs:
+  registry:
+    description: 'Container registry URL'
+    required: false
+    default: 'ghcr.io'
+  image-name:
+    description: 'Image name (defaults to repository name)'
+    required: false
+    default: ${{ github.repository }}
+  flake-output:
+    description: 'Nix flake output path for the Docker image'
+    required: false
+    default: '.#dockerImage'
+  nix-installer-tag:
+    description: 'Nix installer version tag'
+    required: false
+    default: 'v0.31.0'
+  github-token:
+    description: 'GitHub token for registry authentication'
+    required: true
+  tag-latest:
+    description: 'Whether to tag as latest on main/master branch'
+    required: false
+    default: 'true'
+
+outputs:
+  image:
+    description: 'Full image name with registry'
+    value: ${{ steps.push.outputs.image }}
+  digest:
+    description: 'Image digest'
+    value: ${{ steps.push.outputs.digest }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Nix
+      uses: DeterminateSystems/nix-installer-action@v16
+      with:
+        nix-installer-tag: ${{ inputs.nix-installer-tag }}
+
+    - name: Build Docker image
+      shell: bash
+      run: |
+        echo "Building Nix flake output: ${{ inputs.flake-output }}"
+        nix build ${{ inputs.flake-output }}
+        
+        if [ ! -f result ]; then
+          echo "Error: Nix build did not produce a 'result' symlink"
+          exit 1
+        fi
+        
+        echo "Loading Docker image from Nix build result"
+        docker load < result
+
+    - name: Log in to registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ inputs.registry }}
+        username: ${{ github.actor }}
+        password: ${{ inputs.github-token }}
+    
+    - name: Tag and push image
+      id: push
+      shell: bash
+      run: |
+        LOADED_IMAGE=$(docker images --format "{{.Repository}}:{{.Tag}}" | head -n 1)
+        echo "Loaded image: ${LOADED_IMAGE}"
+        
+        IMAGE_NAME=$(echo "${{ inputs.registry }}/${{ inputs.image-name }}" | tr '[:upper:]' '[:lower:]')
+        echo "Target image name: ${IMAGE_NAME}"
+        
+        echo "Tagging and pushing ${IMAGE_NAME}:${{ github.sha }}"
+        docker tag ${LOADED_IMAGE} ${IMAGE_NAME}:${{ github.sha }}
+        docker push ${IMAGE_NAME}:${{ github.sha }}
+        
+        if [ "${{ inputs.tag-latest }}" = "true" ]; then
+          if [ "${{ github.ref }}" = "refs/heads/master" ] || [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "Tagging and pushing ${IMAGE_NAME}:latest"
+            docker tag ${LOADED_IMAGE} ${IMAGE_NAME}:latest
+            docker push ${IMAGE_NAME}:latest
+          fi
+        fi
+        
+        DIGEST=$(docker inspect ${IMAGE_NAME}:${{ github.sha }} --format='{{index .RepoDigests 0}}' | cut -d'@' -f2)
+        
+        echo "image=${IMAGE_NAME}" >> $GITHUB_OUTPUT
+        echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
