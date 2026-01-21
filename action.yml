@@ -42,18 +42,23 @@ runs:
         source-tag: ${{ inputs.source-tag }}
 
     - name: Build Docker image
+      id: build
       shell: bash
       run: |
         echo "Building Nix flake output: ${{ inputs.flake-output }}"
         nix build ${{ inputs.flake-output }}
-        
+
         if [ ! -f result ]; then
           echo "Error: Nix build did not produce a 'result' symlink"
           exit 1
         fi
-        
+
         echo "Loading Docker image from Nix build result"
-        docker load < result
+        LOAD_OUTPUT=$(docker load < result)
+        echo "${LOAD_OUTPUT}"
+
+        LOADED_IMAGE=$(echo "${LOAD_OUTPUT}" | grep -oP 'Loaded image: \K.*')
+        echo "loaded-image=${LOADED_IMAGE}" >> $GITHUB_OUTPUT
 
     - name: Log in to GitHub Container Registry
       uses: docker/login-action@v3
@@ -66,7 +71,7 @@ runs:
       id: push
       shell: bash
       run: |
-        LOADED_IMAGE=$(docker images --format "{{.Repository}}:{{.Tag}}" | head -n 1)
+        LOADED_IMAGE="${{ steps.build.outputs.loaded-image }}"
         echo "Loaded image: ${LOADED_IMAGE}"
         
         IMAGE_NAME=$(echo "ghcr.io/${{ inputs.image-name }}" | tr '[:upper:]' '[:lower:]')
