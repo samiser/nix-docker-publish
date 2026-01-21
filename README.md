@@ -1,7 +1,7 @@
 # Nix Docker Image Publisher
 
 A GitHub Action for building and publishing Docker images from Nix flake
-`dockerImage` outputs.
+outputs.
 
 ## Features
 
@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Publish Docker image
-        uses: samiser/nix-docker-publish@v1
+        uses: samiser/nix-docker-publish@v1.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -40,7 +40,7 @@ jobs:
 
 ```yaml
 - name: Publish Docker image
-  uses: samiser/nix-docker-publish@v1
+  uses: samiser/nix-docker-publish@v1.0.0
   with:
     registry: ghcr.io
     image-name: my-org/my-app
@@ -98,7 +98,7 @@ The action applies the following tags:
 ### Using with custom registry
 
 ```yaml
-- uses: samiser/nix-docker-publish@v1
+- uses: samiser/nix-docker-publish@v1.0.0
   with:
     registry: docker.io
     image-name: myuser/myapp
@@ -113,7 +113,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: samiser/nix-docker-publish@v1
+      - uses: samiser/nix-docker-publish@v1.0.0
         with:
           flake-output: ".#apiImage"
           image-name: ${{ github.repository }}/api
@@ -123,7 +123,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: samiser/nix-docker-publish@v1
+      - uses: samiser/nix-docker-publish@v1.0.0
         with:
           flake-output: ".#webImage"
           image-name: ${{ github.repository }}/web
